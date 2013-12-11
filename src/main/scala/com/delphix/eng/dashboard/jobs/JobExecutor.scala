@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2013 by Delphix.
+ * All rights reserved.
+ */
 package com.delphix.eng.dashboard.jobs;
 
 import java.util.concurrent.ExecutorService
@@ -12,13 +16,9 @@ class JobExecutor {
 	val executorService = Executors.newCachedThreadPool()
 	
 	def schedule(job: () => Unit, commitId: CommitId): Future[Any] = {
-		// TODO: persist job
-		System.out.println("scheduling " + job.getClass().getSimpleName());
 		return executorService.submit(new Callable[Any]() {
 			
 			override def call(): Any = {
-				System.out.println("Running " + job.getClass().getSimpleName());
-				// TODO: persist
 				var success = false;
 				try {
 					job()
@@ -30,10 +30,6 @@ class JobExecutor {
 						}
 					  }
 					e.printStackTrace();
-				} finally {
-					//job.setState(success ? JobState.COMPLETED : JobState.FAILED);
-					// TODO: persist
-					System.out.println("Completed " + job.getClass().getSimpleName());
 				}
 			}
 		});

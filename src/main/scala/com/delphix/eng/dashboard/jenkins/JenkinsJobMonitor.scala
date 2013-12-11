@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2013 by Delphix.
+ * All rights reserved.
+ */
 package com.delphix.eng.dashboard.jenkins
 
 import com.delphix.eng.dashboard.time.Sleepy

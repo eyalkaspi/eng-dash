@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2013 by Delphix.
+ * All rights reserved.
+ */
 package com.delphix.eng.dashboard.time
 
 import java.util.concurrent.Executors
@@ -6,9 +10,6 @@ import java.util.concurrent.TimeUnit
 
 import com.google.inject.ImplementedBy
 
-/**
- * Utility class to tests to control sleep statements
- */
 @ImplementedBy(classOf[SleepyImpl])
 trait Sleepy {
   def sleep(time: Long, unit: TimeUnit = TimeUnit.MILLISECONDS)

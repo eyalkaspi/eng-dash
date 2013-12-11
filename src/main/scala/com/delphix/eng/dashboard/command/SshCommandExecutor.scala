@@ -1,6 +1,8 @@
+/**
+ * Copyright (c) 2013 by Delphix.
+ * All rights reserved.
+ */
 package com.delphix.eng.dashboard.command;
-
-import java.net.InetAddress
 
 class SshCommandExecutor(val host: String, val localExecutor: LocalCommandExecutor) {
 

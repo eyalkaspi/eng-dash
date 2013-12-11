@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2013 by Delphix.
+ * All rights reserved.
+ */
 package com.delphix.eng.dashboard.vm;
 
 import com.delphix.eng.dashboard.command.SshCommandExecutor
@@ -40,11 +44,11 @@ class Dcenter {
     // The VM is not ready, even after dc guest wait
     sleepy.retry(10, (10, TimeUnit.SECONDS)) { () =>
       ssh.withSession(vm) {
+        // TODO: can we use a dc guest command to query smf instead (if ssh is not ready)
         _.execute("test -d /export/home/delphix/dlpx-app-gate/")
       }
     }
 
-    // TODO: Need to store the VM in DB and make sure they eventually get cleaned up (or at least unregistered)
     return vm
   }
 

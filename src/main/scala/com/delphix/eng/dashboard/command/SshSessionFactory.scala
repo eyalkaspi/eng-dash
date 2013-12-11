@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2013 by Delphix.
+ * All rights reserved.
+ */
 package com.delphix.eng.dashboard.command
 
 import com.google.inject.Inject
@@ -6,7 +10,6 @@ import com.delphix.eng.dashboard.vm.VmIdentifier
 class SshSessionFactory @Inject() (val localExec: LocalCommandExecutor) {
   
   def withSession[T](vmId: VmIdentifier) (f: (SshCommandExecutor) => T): T = {
-    // TODO: Provide an elegant way to group commands
     f(new WithGitDirSshCommandExecutor(new SshCommandExecutor(vmId.hostName, localExec)))
   }
   

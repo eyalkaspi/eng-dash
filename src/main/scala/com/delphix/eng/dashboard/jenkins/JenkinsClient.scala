@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2013 by Delphix.
+ * All rights reserved.
+ */
 package com.delphix.eng.dashboard.jenkins
 
 import scala.collection.JavaConversions._
@@ -40,7 +44,6 @@ class JenkinsClient(val server: JenkinsServer, val httpClient: JenkinsHttpClient
   }
 
   def runPrecommit(vm: VmIdentifier, revision: Id[Revision]): JenkinsJob = {
-    // JenkinsServer jenkins = new JenkinsServer(new URI("http://localhost:8080/jenkins"), "admin", "password")
     val precommitJob = server.getJob("app-precommit")
     var lastBuildNumber = precommitJob.details().getLastBuild().getNumber()
     val uuid = UUID.randomUUID().toString()

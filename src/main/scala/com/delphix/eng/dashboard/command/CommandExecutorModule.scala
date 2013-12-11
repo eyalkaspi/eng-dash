@@ -1,7 +1,10 @@
+/**
+ * Copyright (c) 2013 by Delphix.
+ * All rights reserved.
+ */
 package com.delphix.eng.dashboard.command
 
 import com.tzavellas.sse.guice.ScalaModule
-import java.net.InetAddress
 import com.google.inject.Provides
 import com.google.inject.name.Named
 import java.net.UnknownHostException

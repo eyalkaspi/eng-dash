@@ -1,7 +1,10 @@
+/**
+ * Copyright (c) 2013 by Delphix.
+ * All rights reserved.
+ */
 package com.delphix.eng.dashboard.command
 
 import scala.sys.process._
-import com.google.common.base.Preconditions
 
 class LocalCommandExecutorImpl extends LocalCommandExecutor {
   def execute(command: List[String]): Seq[String] = {

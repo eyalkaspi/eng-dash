@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2013 by Delphix.
+ * All rights reserved.
+ */
 package com.delphix.eng.dashboard.git.commit;
 
 import com.delphix.eng.dashboard.git.repository.LocalRepo
@@ -38,21 +42,16 @@ class GitCommitHandler {
     val revisionId = revisions.save(commitId)
 
     jobExecutor.schedule(() => {
-      // TODO: need to persist the VM to make sure we unregister it later on
       val vm = dcenter.createVM(revisionId);
-      //val vm = new VmIdentifier("eyal-eng-dashboard-1")
       val branch = localRepo.push(commitId, vm)
       
       ssh.withSession(vm) {s =>
-        // TODO: need a better way to combine statements
         s.execute(s"cd dlpx-app-gate && git checkout ${branch}")
       }
       
       val preCommitJob = jenkins.runPrecommit(vm, revisionId)
       jenkinsJobs.save(preCommitJob)
       jobMonitor.monitor(preCommitJob)
-      
-      // TODO Have a background worker monitor the job
 
     }, commitId)
   }
