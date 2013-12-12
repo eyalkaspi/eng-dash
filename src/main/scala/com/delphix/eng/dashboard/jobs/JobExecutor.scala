@@ -24,7 +24,7 @@ class JobExecutor {
 					job()
 					success = true;
 				} catch {
-				  case e: RuntimeException => {
+				  case e: Throwable => {
 						if (e.getCause().isInstanceOf[InterruptedException]) {
 							return;
 						}
