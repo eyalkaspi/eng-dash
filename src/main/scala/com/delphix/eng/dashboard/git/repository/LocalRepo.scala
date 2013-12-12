@@ -8,11 +8,13 @@ import com.delphix.eng.dashboard.git.commit.Commit
 import com.delphix.eng.dashboard.git.commit.CommitId
 import com.delphix.eng.dashboard.vm.VmIdentifier
 import scala.sys.process.Process
+import com.delphix.eng.dashboard.git.commit.Author
 
 class LocalRepo {
 
   def read(id: CommitId): Commit = {
-    return Commit(execute("git", "log", "-1", id.id))
+    val author = new Author(execute("git", "log", "-1", "--format=%aE", id.id).mkString("\n"))
+    return new Commit(id, author)
   }
 
   /**
