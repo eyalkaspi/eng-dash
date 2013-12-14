@@ -14,6 +14,10 @@ import com.google.inject.Inject
 import com.delphix.eng.dashboard.persistence.RepoTable
 import com.delphix.eng.dashboard.persistence.Id
 import RevisionState._
+import com.delphix.eng.dashboard.vm.VmIdentifier
+import com.delphix.eng.dashboard.git.commit.Author
+import com.delphix.eng.dashboard.git.commit.Author
+import com.delphix.eng.dashboard.git.commit.Author
 
 class Revisions @Inject() (val db: Database) {
 
@@ -21,10 +25,21 @@ class Revisions @Inject() (val db: Database) {
     { state => state.toString() },
     { name => RevisionState withName name })
 
+  implicit val vmIdentifierMapper = MappedTypeMapper.base[VmIdentifier, String](
+    { vm => vm.id },
+    { name => new VmIdentifier(name) })
+
+  implicit val authorMapper = MappedTypeMapper.base[Author, String](
+    { author => author.email },
+    { email => new Author(email) })
+
   val table = new RepoTable[Revision]("REVISION")(TypeMappers.revisionTypeMapper) {
     def commitId = column[CommitId]("COMMIT_ID", O.NotNull)
     def state = column[RevisionState]("STATE")
-    def * = id.? ~ commitId ~ state <> (Revision, Revision.unapply _)
+    def vm = column[VmIdentifier]("VM")
+    def author = column[Author]("AUTHOR")
+    def * = id.? ~ commitId ~ state ~ vm ~ author <> (Revision, Revision.unapply _)
+    def uniqueCommit = index("unique_commit_id", commitId, unique = true)
   }
 
   def createDDl() = {
@@ -39,6 +54,12 @@ class Revisions @Inject() (val db: Database) {
     }
   }
 
+  def getByCommitId(id: CommitId) = {
+    db withSession {
+      (for (f <- table if f.commitId.asColumnOf[String] === id.id) yield f) firstOption
+    }
+  }
+
   def updateState(id: Id[Revision], state: RevisionState) = {
     db withSession {
       val q = for (f <- table if f.id.asColumnOf[Int] === id.id) yield f.state
@@ -47,9 +68,9 @@ class Revisions @Inject() (val db: Database) {
     }
   }
 
-  def save(commitId: CommitId): Id[Revision] = {
+  def save(commitId: CommitId, vm: VmIdentifier, author: Author): Id[Revision] = {
     db withSession {
-      table.autoInc.insert(Revision(Option.empty, commitId, RevisionState.INITIAL))
+      table.autoInc.insert(Revision(Option.empty, commitId, RevisionState.INITIAL, vm, author))
     }
   }
 

@@ -13,7 +13,7 @@ import com.delphix.eng.dashboard.git.commit.Author
 class LocalRepo {
 
   def read(id: CommitId): Commit = {
-    val author = new Author(execute("git", "log", "-1", "--format=%aE", id.id).mkString("\n"))
+    val author = new Author(execute("git", "log", "-1", "--format=%ce", id.id).mkString("\n"))
     return new Commit(id, author)
   }
 

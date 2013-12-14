@@ -35,9 +35,29 @@ class JenkinsJobs @Inject() (val db: Database, val revisions: Revisions) {
     }
   }
 
+  def get(id: Id[JenkinsJob]) = {
+    db withSession {
+      (for (f <- table if f.id.asColumnOf[Int] === id.id) yield f) first
+    }
+  }
+
   def save(job: JenkinsJob): Unit = {
     db withSession {
       table.insert(job)
+    }
+  }
+
+  def updateState(id: Id[JenkinsJob], state: JenkinsJobState) = {
+    db withSession {
+      val q = for (f <- table if f.id.asColumnOf[Int] === id.id) yield f.state
+      val r = q.update(state)
+      require(r == 1)
+    }
+  }
+
+  def listByRevision(revId: Id[Revision]) = {
+    db withSession {
+      (for (f <- table if f.revision.asColumnOf[Int] === revId.id) yield f) list
     }
   }
 

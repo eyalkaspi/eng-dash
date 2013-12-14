@@ -18,7 +18,7 @@ GIT_DIR=$(cd $GIT_DIR; pwd -P)
 
 
 newrev=$(print_revs | tail -1)
-curl -X POST "http://localhost:8080/git/commit/$newrev" || die "web service call failed"
+curl -N -X POST "http://localhost:8080/git/commit/$newrev" || die "web service call failed"
 
 # Reject the commit to prevent users from altering the git repo.
 exit 1

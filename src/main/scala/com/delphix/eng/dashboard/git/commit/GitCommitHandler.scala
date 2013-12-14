@@ -27,28 +27,50 @@ class GitCommitHandler {
   @Inject val jobExecutor: JobExecutor = null
   @Inject val revisions: Revisions = null
   @Inject val jenkins: JenkinsClient = null
-  @Inject val jenkinsJobs: JenkinsJobs = null
-  @Inject val jobMonitor: JenkinsJobMonitor = null
   @Inject val ssh: SshSessionFactory = null
+  @Inject val jobMonitor: JenkinsJobMonitor = null
+
+  def retryCommit(commitId: CommitId, revision: Revision) = {
+    println("retrying" + commitId)
+    val commit = localRepo.read(commitId)
+    println("got " + commit)
+
+    runJob(commitId, revision.id.get)
+  }
 
   def handleNewCommit(commitId: CommitId): Unit = {
     println("handling " + commitId)
     val commit = localRepo.read(commitId)
     println("got " + commit)
 
-    val revisionId = revisions.save(commitId)
+    val vm = new VmIdentifier("eyal-eng-dashboard-" + commit.id.id.substring(0,10))
+    val revisionId = revisions.save(commitId, vm, commit.author)
 
+    runJob(commitId, revisionId)
+  }
+
+  def runJob(commitId: CommitId, revisionId: Id[Revision]) = {
+    val revision = revisions.get(revisionId)
+    val vm = revision.vm
     jobExecutor.schedule(() => {
-      val vm = dcenter.createVM(revisionId);
-      val branch = localRepo.push(commitId, vm)
+      revisions.updateState(revisionId, RevisionState.RUNNING)
+      try {
+        dcenter.createVM(vm);
 
-      ssh.withSession(vm) { s =>
-        s.exec(s"cd /export/home/delphix/dlpx-app-gate/ && git checkout ${branch}")
+        val branch = localRepo.push(commitId, vm)
+
+        ssh.withSession(vm) { s =>
+          s.exec(s"cd /export/home/delphix/dlpx-app-gate/ && git checkout ${branch}")
+        }
+
+        jobMonitor.monitor(jenkins.runPrecommit(vm, revision))
+        jobMonitor.monitor(jenkins.runBlackBox(vm, revision))
+      } catch {
+        case e: Exception =>
+          e.printStackTrace()
+          revisions.updateState(revisionId, RevisionState.FAILED)
+          jenkins.suspend(vm)
       }
-
-      val preCommitJob = jenkins.runPrecommit(vm, revisionId)
-      jenkinsJobs.save(preCommitJob)
-      jobMonitor.monitor(preCommitJob)
 
     }, commitId)
   }

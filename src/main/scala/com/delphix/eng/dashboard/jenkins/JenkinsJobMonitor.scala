@@ -26,17 +26,21 @@ class JenkinsJobMonitor @Inject() (
   val revisions: Revisions) {
 
   def monitor(job: JenkinsJob) = {
-
+    val jobId = job.id
     sleepy.runAtFixedInterval(10, TimeUnit.SECONDS, (f) => {
       try {
+        val job = jenkinsJobs.get(jobId)
         val details = jenkins.getJobDetails(job)
-        // TODO
-        //job.setState(details.getResult())
-        //jenkinsJobs.update(job)
+        if (details.getResult() != null) {
+          val jobState = JenkinsJobState withName (details.getResult().name())
+          if (jobState != job.state) {
+            jenkinsJobs.updateState(jobId, jobState)
+          }
+        }
         if (details.isBuilding()) {
           println(s"job ${job.id} building")
         } else {
-          println("removed")
+          println(s"stop monitoring ${jobId}")
           jobComplete(job.revision)
           // prevent future executions
           f.cancel(false)
@@ -46,25 +50,25 @@ class JenkinsJobMonitor @Inject() (
       }
     })
   }
-  
+
   def start() = {
     // TODO: load pending jobs from database and schedule monitoring tasks
   }
 
   private def jobComplete(revisionId: Id[Revision]) = {
     val revision = revisions.get(revisionId)
-    // TODO: support multiple jobs
+    val jobs = jenkinsJobs.listByRevision(revisionId)
 
-    // Update database
-    revisions.updateState(revisionId, RevisionState.COMPLETE)
+    // Check if all jobs are complete
+    if (jobs.find(_.state.isBuilding()).isEmpty) {
+      // Update database
+      revisions.updateState(revisionId, RevisionState.COMPLETE)
+    }
 
     // Suspend VM
     // TODO: store the vm identifier along with the revision
     val vmId = new VmIdentifier("eyal-eng-dashboard-" + revisionId.id)
     jenkins.suspend(vmId)
-
-    // TODO: Not sure if we should send an email, since jenkins already is
-
   }
 
 }

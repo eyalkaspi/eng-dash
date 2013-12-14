@@ -12,9 +12,10 @@ import scala.slick.lifted.TypeMapper
 import com.delphix.eng.dashboard.jenkins.JenkinsJob
 
 object TypeMappers {
-  implicit val commitIdType: MappedTypeMapper[CommitId, String] = MappedTypeMapper.base[CommitId, String](
+  
+  implicit val commitIdType = MappedTypeMapper.base[CommitId, String](
     { commitId => commitId.id },
-    { id => new CommitId(id) }).asInstanceOf[MappedTypeMapper[CommitId, String]]
+    { id => new CommitId(id) })
 
   implicit val jenkinsJobTypeMapper = TypeMappers.idType[JenkinsJob]()
   implicit val revisionTypeMapper = TypeMappers.idType[Revision]()

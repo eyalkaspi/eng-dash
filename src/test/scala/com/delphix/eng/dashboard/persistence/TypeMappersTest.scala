@@ -15,7 +15,7 @@ import com.delphix.eng.dashboard.revision.Revision
 class TypeMappersTest extends FunSuite {
 
   test("commitIdType") {
-    val typeMapper = TypeMappers.commitIdType
+    val typeMapper = TypeMappers.commitIdType.asInstanceOf[MappedTypeMapper[CommitId, String]]
     expect("hello") (typeMapper.map(CommitId("hello")))
     expect(CommitId("hello")) (typeMapper.comap("hello"))
   }

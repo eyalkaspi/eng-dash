@@ -21,19 +21,27 @@ class Dcenter {
   @Inject
   val sleepy: Sleepy = null
 
-  def createVM(id: Id[Revision]): VmIdentifier = {
+  def createVM(vm: VmIdentifier): VmIdentifier = {
     // TODO: this should be resolved from the commit
     val groupName = "dlpx-trunk"
-    val vmName = "eyal-eng-dashboard-" + id.id
-    val vm = new VmIdentifier(vmName)
 
-    // TODO: Set an automatic expiration in
+    // TODO: Set an automatic expiration when cloning
     ssh.withSession("dcenter") { s =>
-      s.exec("/usr/bin/dc clone-latest", groupName, vmName)
+      s.exec({ (exitCode: Int, stdout: String, stderr: String) =>
+        if (!stderr.contains("already exists")) {
+          throw new IllegalArgumentException("failed to clone VM")
+        }
+        // TODO: Check if it is registered before trying
+        s.exec({ (exitCode: Int, stdout: String, stderr: String) =>
+          if (!stderr.contains("already registere")) {
+            throw new IllegalArgumentException("failed to clone VM")
+          }
+        }, "/usr/bin/dc register", vm.id)
+      }, "/usr/bin/dc clone-latest", groupName, vm.id)
       // The VM is not ready, even after dc guest wait
       sleepy.retry(10, (10, TimeUnit.SECONDS)) { () =>
-        s.exec(s"/usr/bin/dc guest wait", vmName)
-        s.exec(s"/usr/bin/dc guest run", vmName, "'svcadm enable -s svc:/network/ssh:default'")
+        s.exec(s"/usr/bin/dc guest wait", vm.id)
+        s.exec(s"/usr/bin/dc guest run", vm.id, "'svcadm enable -s svc:/network/ssh:default'")
       }
     }
 
