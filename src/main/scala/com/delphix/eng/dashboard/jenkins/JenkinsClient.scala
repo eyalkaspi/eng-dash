@@ -19,6 +19,7 @@ import com.delphix.eng.dashboard.vm.VmIdentifier
 import com.offbytwo.jenkins.model.JobWithDetails
 import com.google.inject.Provider
 import com.google.inject.Inject
+import JenkinsJobType._
 
 class JenkinsClient @Inject() (val server: JenkinsServer,
   val jenkinsJobs: JenkinsJobs, val httpClient: JenkinsHttpClient) {
@@ -39,7 +40,7 @@ class JenkinsClient @Inject() (val server: JenkinsServer,
   }
 
   def runPrecommit(vm: VmIdentifier, revision: Revision) = {
-    runJob("app-precommit", revision.id.get,
+    runJob(JenkinsJobType.PRECOMMIT, revision.id.get,
       Map(
         "VM_NAME" -> vm.id,
         "DCENTER_HOST" -> "dcenter",
@@ -48,15 +49,15 @@ class JenkinsClient @Inject() (val server: JenkinsServer,
   }
   
   def runBlackBox(vm: VmIdentifier, revision: Revision) = {
-    runJob("eyal-eng-dash", revision.id.get,
+    runJob(JenkinsJobType.BLACKBOX, revision.id.get,
       Map(
         "VM_NAME" -> vm.id,
         "EMAIL" ->  revision.author.email))
   }
 
-  private def runJob(name: String, revision: Id[Revision], parameters: Map[String, String]):
+  private def runJob(jobType: JenkinsJobType, revision: Id[Revision], parameters: Map[String, String]):
   JenkinsJob = {
-    val jenkinsJob = server.getJob(name)
+    val jenkinsJob = server.getJob(jobType.name)
     var lastBuildNumber = jenkinsJob.details().getLastBuild().getNumber()
 
     val uuid = UUID.randomUUID().toString()
@@ -80,7 +81,8 @@ class JenkinsClient @Inject() (val server: JenkinsServer,
         }
       }
     }
-    val job = JenkinsJob(Id(newJob.getNumber()), newJob.getUrl(), JenkinsJobState.UNKNOWN, revision)
+    val job = JenkinsJob(Id(newJob.getNumber()), newJob.getUrl(),
+        JenkinsJobState.UNKNOWN, jobType, revision)
     jenkinsJobs.save(job)
     return job
   }

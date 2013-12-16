@@ -29,7 +29,7 @@ class JenkinsJobMonitor @Inject() (
     val jobId = job.id
     sleepy.runAtFixedInterval(10, TimeUnit.SECONDS, (f) => {
       try {
-        val job = jenkinsJobs.get(jobId)
+         val job = jenkinsJobs.get(jobId)
         val details = jenkins.getJobDetails(job)
         if (details.getResult() != null) {
           val jobState = JenkinsJobState withName (details.getResult().name())
@@ -52,7 +52,7 @@ class JenkinsJobMonitor @Inject() (
   }
 
   def start() = {
-    // TODO: load pending jobs from database and schedule monitoring tasks
+    jenkinsJobs.listPending().foreach{ monitor(_) }
   }
 
   private def jobComplete(revisionId: Id[Revision]) = {

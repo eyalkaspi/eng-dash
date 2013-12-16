@@ -13,15 +13,15 @@ function die
 mvn clean install || die "mvn install failed"
 
 # assemble a single jar with all dependencies
-mvn assembly:single || die "assembly the binary failed"
+mvn package || die "assembly the binary failed"
 
 # scp the jar to the remote server
-scp target/eng.dashboard-0.0.1-SNAPSHOT-jar-with-dependencies.jar\
-	delphix@eyal-eng-dash:/usr/local/eng.dashboard/eng-dashboard-0.1.jar || \
+scp target/eng.dashboard-0.0.1-SNAPSHOT.jar\
+	delphix@eyal-eng-dash.dcenter.delphix.com:/usr/local/eng.dashboard/eng-dashboard-0.1.jar || \
 	die "could not scp jar"
 
 # kill the server and restart it
-ssh delphix@eyal-eng-dash /bin/bash <<EOF
+ssh delphix@eyal-eng-dash.dcenter.delphix.com /bin/bash <<EOF
 export PATH=/usr/bin:/bin:/usr/sbin
 
 function die
@@ -33,7 +33,7 @@ function die
 
 killall java 2>/dev/null
 (GIT_DIR=/usr/local/dlpx-app-gate/.git nohup java -jar \
-	/usr/local/eng.dashboard/eng-dashboard-0.1.jar &>eng-dash.log &)
+	/usr/local/eng.dashboard/eng-dashboard-0.1.jar &>>eng-dash.log &)
 
 echo "started java"
 exit 0

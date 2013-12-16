@@ -10,10 +10,12 @@ import com.offbytwo.jenkins.model.Build
 import com.delphix.eng.dashboard.persistence.Id
 import com.delphix.eng.dashboard.revision.Revision
 import JenkinsJobState._
+import JenkinsJobType._
 
 case class JenkinsJob(
     id: Id[JenkinsJob],
     url: String,
     state: JenkinsJobState,
+    jobType: JenkinsJobType,
     revision: Id[Revision])
 

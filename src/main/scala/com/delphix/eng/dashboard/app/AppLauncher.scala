@@ -45,8 +45,8 @@ object AppLauncher {
     // Must add DefaultServlet for embedded Jetty.
     // Failing to do this will cause 404 errors.
     // This is not needed if web.xml is used instead.
-    sch.addServlet(classOf[DefaultServlet], "/");
-
+    sch.addServlet(classOf[StaticServlet], "/");
+    
     // Start the server
     server.start();
     server.join();
