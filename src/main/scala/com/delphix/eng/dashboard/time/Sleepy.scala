@@ -13,23 +13,13 @@ import com.google.inject.ImplementedBy
 @ImplementedBy(classOf[SleepyImpl])
 trait Sleepy {
   def sleep(time: Long, unit: TimeUnit = TimeUnit.MILLISECONDS)
-  def runAtFixedInterval(period: Long, unit: TimeUnit, task: (ScheduledFuture[_]) => Any)
   def retry[T](count: Int, period: (Long, TimeUnit))(task: () => T): T
 }
 
 class SleepyImpl extends Sleepy {
 
-  val executor = Executors.newScheduledThreadPool(32)
-
   def sleep(time: Long, unit: TimeUnit = TimeUnit.MILLISECONDS) = {
     unit.sleep(time)
-  }
-
-  def runAtFixedInterval(period: Long, unit: TimeUnit, task: (ScheduledFuture[_]) => Any) = {
-    var future: ScheduledFuture[_] = null
-    future = executor.scheduleAtFixedRate(new Runnable() {
-      def run(): Unit = task(future)
-    }, 0, period, unit)
   }
 
   def retry[T](count: Int, period: (Long, TimeUnit))(task: () => T): T = {

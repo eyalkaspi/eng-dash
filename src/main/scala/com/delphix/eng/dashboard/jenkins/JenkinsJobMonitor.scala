@@ -16,59 +16,25 @@ import com.delphix.eng.dashboard.vm.VmIdentifier
 import com.delphix.eng.dashboard.revision.RevisionState
 import com.delphix.eng.dashboard.persistence.Id
 import com.delphix.eng.dashboard.revision.Revision
-import com.google.inject.Singleton
+import com.delphix.eng.dashboard.jobs.JobExecutor
 
-@Singleton
 class JenkinsJobMonitor @Inject() (
   val jenkins: JenkinsClient,
-  val sleepy: Sleepy,
   val jenkinsJobs: JenkinsJobs,
+  val jobExecutor: JobExecutor,
   val revisions: Revisions) {
 
-  def monitor(job: JenkinsJob) = {
-    val jobId = job.id
-    sleepy.runAtFixedInterval(10, TimeUnit.SECONDS, (f) => {
-      try {
-         val job = jenkinsJobs.get(jobId)
-        val details = jenkins.getJobDetails(job)
-        if (details.getResult() != null) {
-          val jobState = JenkinsJobState withName (details.getResult().name())
-          if (jobState != job.state) {
-            jenkinsJobs.updateState(jobId, jobState)
-          }
-        }
-        if (details.isBuilding()) {
-          println(s"job ${job.id} building")
-        } else {
-          println(s"stop monitoring ${jobId}")
-          jobComplete(job.revision)
-          // prevent future executions
-          f.cancel(false)
-        }
-      } catch {
-        case e: Exception => e.printStackTrace()
-      }
-    })
-  }
-
   def start() = {
-    jenkinsJobs.listPending().foreach{ monitor(_) }
-  }
+    jenkinsJobs.listPending().foreach { job =>
+      jobExecutor.schedule { () =>
+        /* TODO: Need to be able to retrieve or persist the task schedule to restart it.
+	     * As a quick fix, just make sure we cleanup the VM
+	     */
 
-  private def jobComplete(revisionId: Id[Revision]) = {
-    val revision = revisions.get(revisionId)
-    val jobs = jenkinsJobs.listByRevision(revisionId)
-
-    // Check if all jobs are complete
-    if (jobs.find(_.state.isBuilding()).isEmpty) {
-      // Update database
-      revisions.updateState(revisionId, RevisionState.COMPLETE)
+        jenkins.monitorAndWait(List(job.id.get))
+        jenkins.suspend(revisions.get(job.revision))
+      }
     }
-
-    // Suspend VM
-    // TODO: store the vm identifier along with the revision
-    val vmId = new VmIdentifier("eyal-eng-dashboard-" + revisionId.id)
-    jenkins.suspend(vmId)
   }
 
 }

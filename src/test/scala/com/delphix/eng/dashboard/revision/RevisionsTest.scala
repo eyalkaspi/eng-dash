@@ -4,7 +4,6 @@
  */
 package com.delphix.eng.dashboard.revision
 
-import org.junit.runner.RunWith
 import scala.slick.jdbc.ResultSetInvoker
 import org.scalatest.FunSuite
 import com.delphix.eng.dashboard.git.commit.Author
@@ -20,12 +19,13 @@ class RevisionsTest extends FunSuite {
 	test("insert") {
 		val revisions = new Revisions(TestDatabase())
 		revisions.createDDl
-		revisions.save(CommitId("commit"), new VmIdentifier("vm1"), new Author("eyal@delphix.com"))
+		revisions.save(CommitId("commit"), new VmIdentifier("vm1"), new Author("eyal@delphix.com"),
+		    "xyz", RevisionType.PUSHING)
 		val list = revisions.list
 		expect(1)(list.size)
 		val rev = Revision(Some(new Id[Revision](1)),
-		    CommitId("commit"), RevisionState.COMPLETE, new VmIdentifier("vm1"),
-		    new Author("eyal@delphix.com"))
+		    CommitId("commit"), RevisionState.COMPLETE, RevisionType.PUSHING, new VmIdentifier("vm1"),
+		    new Author("eyal@delphix.com"), "xyz")
 		expect(rev)(list.head)
 	}
 }

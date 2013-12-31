@@ -13,9 +13,9 @@ import JenkinsJobState._
 import JenkinsJobType._
 
 case class JenkinsJob(
-    id: Id[JenkinsJob],
-    url: String,
-    state: JenkinsJobState,
+    id: Option[Id[JenkinsJob]],
+    url: Option[String],
+    state: Option[JenkinsJobState],
     jobType: JenkinsJobType,
     revision: Id[Revision])
 

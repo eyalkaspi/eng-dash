@@ -7,7 +7,7 @@
 
 <html>
   <head>
-    <title>Bootstrap 101 Template</title>
+    <title>Delphix Engineering Building Dashbaord</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Bootstrap -->
     <!-- Latest compiled and minified CSS -->
@@ -30,40 +30,187 @@
     <script src="/js/knockback-full-stack.js"></script>
     <script src="/js/revisions.js"></script>
     <script src="/js/application.js"></script>
+    <style>
+	.hideOverflow
+	{
+	    overflow:hidden;
+	    white-space:nowrap;
+	    text-overflow:ellipsis;
+	}
+	.well {
+		padding: 7px 5px;
+		margin-bottom: 10px;
+	}
+	body {
+		background-color: #444;
+	}
+	.section {
+	    border: solid 1px white;
+	    border-radius: 3px;
+	    margin: 10px;
+	    padding: 5px;
+	}
+	h3 {
+		color: #eee;
+	}
+	.col-md-6 {
+		padding-right: 0;
+	}
+	.zoom-in {
+		cursor: -webkit-zoom-in;
+	}
+	iframe {
+		width: 100%;
+		height: 240px;
+		padding-top: 30px;
+	}
+	.container {
+		display: none;
+	}	
+	</style>
   </head>
   <body>
-    <div class="container">
-      <h1>Revision</h1>
-      <table id="revisions_table" class="table table-striped">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>CommitId</th>
-            <th>VM</th>
-            <th>Precommit</th>
-            <th>Blackbox</th>
-            <th>State</th>
-          </tr>
-        </thead>
-        <tbody data-bind="foreach: revisions">
-          <tr>
-              <td data-bind="text: id"/>
-              <td data-bind="text: commitId"/>
-              <td data-bind="text: vm"/>
-              <td>
-                <a data-bind="attr: { href: preCommitUrl }">
-                  <span data-bind="text: preCommitStatus"/>
+	<script type="text/html" id="revision-template">
+	    <div class="well col-md-12">
+          <div class="row header zoom-in" data-bind="click: $parent.revisionClickHandler">
+          	<div class="col-md-12"><strong><span hideOverflow" data-bind="text: commitMsg"/></strong>
+          	</div>
+          </div>
+          <div class="row header"> 
+            <div class="col-md-4 hideOverflow zoom-in" data-bind="text: commitId, attr: { title: commitId }, click: $parent.revisionClickHandler">
+            </div>
+            <div class="col-md-2"><italic><span data-bind="text: author"/></italic></div>
+              <div class="col-md-2">
+                <!-- ko if: preCommitStatus -->
+                	<!-- ko if: preCommitStatus() !== "PRE_CREATION" -->
+	                	<a data-bind="attr: { href: preCommitUrl }">Pre</a>
+	                <!-- /ko -->
+	                <!-- ko if: preCommitStatus() === "PRE_CREATION" -->
+ 		                Pre <span class="glyphicon glyphicon-time"></span>
+		            <!-- /ko -->
+		            <!-- ko if: preCommitStatus() === "UNKNOWN" -->
+		                <span class="glyphicon glyphicon-play"></span>
+		            <!-- /ko -->
+		            <!-- ko if: preCommitStatus() === "SUCCESS" -->
+		                <span class="glyphicon glyphicon-check"></span>
+		            <!-- /ko -->
+		            <!-- ko if: preCommitStatus() === "FAILURE" || preCommitStatus() === "ABORTED" || preCommitStatus() === "UNSTABLE" -->
+		                <span class="glyphicon glyphicon-remove"></span>
+		            <!-- /ko -->
+	          	<!-- /ko -->
+              </div>
+              <div class="col-md-2">
+              	<!-- ko if: blackboxStatus -->
+              		<!-- ko if: preCommitStatus() !== "PRE_CREATION" -->
+	                	<a data-bind="attr: { href: blackboxUrl }">Bla</a>
+	                <!-- /ko -->
+	                <!-- ko if: blackboxStatus() === "PRE_CREATION" -->
+		                Bla <span class="glyphicon glyphicon-time"></span>
+		            <!-- /ko -->
+		            <!-- ko if: blackboxStatus() === "UNKNOWN" -->
+		                <span class="glyphicon glyphicon-play"></span>
+		            <!-- /ko -->
+		            <!-- ko if: blackboxStatus() === "SUCCESS" -->
+		                <span class="glyphicon glyphicon-check"></span>
+		            <!-- /ko -->
+		             <!-- ko if: blackboxStatus() === "FAILURE" || blackboxStatus() === "ABORTED" || blackboxStatus() === "UNSTABLE" -->
+		                <span class="glyphicon glyphicon-remove"></span>
+		            <!-- /ko -->
                 </a>
-              </td>
-              <td>
-                <a data-bind="attr: { href: blackboxUrl }">
-                  <span data-bind="text: blackboxStatus"/>
+                <!-- /ko -->
+              </div>
+              <div class="col-md-2">
+              	<!-- ko if: type() === "PUSHING" -->
+              		<!-- ko if: pushStatus() !== "PRE_CREATION" -->
+	                	<a data-bind="attr: { href: pushUrl }">Push</a>
+	                <!-- /ko -->
+	                <!-- ko if: pushStatus() === "PRE_CREATION" -->
+		                Push <span class="glyphicon glyphicon-time"></span>
+		            <!-- /ko -->
+		            <!-- ko if: pushStatus() === "UNKNOWN" -->
+		                <span class="glyphicon glyphicon-play"></span>
+		            <!-- /ko -->
+		            <!-- ko if: pushStatus() === "SUCCESS" -->
+		                <span class="glyphicon glyphicon-check"></span>
+		            <!-- /ko -->
+		             <!-- ko if: pushStatus() === "FAILURE" || pushStatus() === "ABORTED" || pushStatus() === "UNSTABLE" -->
+		                <span class="glyphicon glyphicon-remove"></span>
+		            <!-- /ko -->
                 </a>
-              </td>
-              <td data-bind="text: state"/>
-          </tr>
-        </tbody>
-      </table>
+                <!-- /ko -->
+              </div>
+              <!-- ko if: state() == "FAILED" -->
+              <div class="col-md-2" data-bind="text: state"></div>
+              <!-- /ko -->
+          </div>
       </div>
+	</script>
+    <div id="listing" class="container">
+     <div class="row">
+     	<div class="col-md-6">
+     		<div class="section col-md-12">
+     		<h3>Testing</h3>
+     		<div data-bind="template: { name: 'revision-template', foreach: testingRevisions }"></div>
+     		</div>
+     		<div class="section col-md-12">
+     		<h3>Tested</h3>
+     		<div data-bind="template: { name: 'revision-template', foreach: testedRevisions }"></div>
+     		</div>
+     	</div>
+     	<div class="col-md-6">
+     		<div class="section col-md-12">
+     		<h3>Pushing</h3>
+     		<div data-bind="template: { name: 'revision-template', foreach: pushingRevisions }"></div>
+     		</div>
+     		<div class="section col-md-12">
+     		<h3>Pushed</h3>
+     		<div data-bind="template: { name: 'revision-template', foreach: pushedRevisions }"></div>
+     		</div>
+     	</div>
+      </div>
+    </div>
+    
+    <div id="single" class="container">
+      <div class="row well">
+          <div class="row header">
+          	<div class="col-md-12"><strong><span hideOverflow" data-bind="text: commitMsg"/></strong>
+          </div>
+          </div>
+          <div class="row header"> 
+            <div class="col-md-12" data-bind="text: commitId">
+            </div>
+          </div>
+      </div>
+      
+      <!-- ko if: preCommitStatus -->
+	  <div class="row well"> 
+		PreCommit: <a data-bind="text: preCommitStatus, attr: { href: preCommitUrl }"></a>
+		<!-- ko if: preCommitUrl() -->
+		  <iframe data-bind="attr: { src: preCommitUrl() + '/logText/progressiveText#main-panel' } ">
+		  </iframe>
+		<!-- /ko -->
+	  </div>
+	  <!-- /ko -->
+	  
+	  <!-- ko if: blackboxStatus -->
+	  <div class="row well"> 
+		BlackBox: <a data-bind="text: blackboxStatus, attr: { href: blackboxUrl }"></a>
+		<!-- ko if: blackboxUrl() -->
+		  <iframe data-bind="attr: { src: blackboxUrl() + '/logText/progressiveText#main-panel' } ">
+		  </iframe>
+		<!-- /ko -->
+	  </div>
+	  <!-- /ko -->
+	  
+	  <!-- ko if: pushStatus -->
+	  <div class="row well"> 
+		Push: <a data-bind="text: pushStatus, attr: { href: pushUrl }"></a>
+		<!-- ko if: pushUrl() -->
+		  <iframe data-bind="attr: { src: pushUrl() + '/logText/progressiveText#main-panel' } ">
+		  </iframe>
+		<!-- /ko -->
+	  </div>
+	  <!-- /ko -->
+     </div>
   </body>
 </html>

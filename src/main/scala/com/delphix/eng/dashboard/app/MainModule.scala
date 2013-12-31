@@ -14,6 +14,8 @@ import com.sun.jersey.spi.container.WebApplication
 import java.util.Map
 import java.util.Collections
 import com.delphix.eng.dashboard.revision.RevisionResource
+import com.google.inject.name.Names
+import java.net.InetAddress
 
 class MainModule extends JerseyServletModule {
   override def configureServlets() = {
@@ -34,6 +36,18 @@ class MainModule extends JerseyServletModule {
     
     // jenkins integration
     install(new JenkinsModule())
+    
+    val port = 8080
+    bind(classOf[Integer])
+    	.annotatedWith(Names.named("port"))
+    	.toInstance(port)
+    
+    val hostname = InetAddress.getLocalHost().getHostName()
+    bind(classOf[String])
+    	.annotatedWith(Names.named("homepage"))
+    	.toInstance(s"http://${hostname}.delphix.com:${port}/")
+    	
+    	
   }
   
 }

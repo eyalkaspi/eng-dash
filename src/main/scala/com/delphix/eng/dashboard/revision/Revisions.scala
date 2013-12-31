@@ -14,9 +14,8 @@ import com.google.inject.Inject
 import com.delphix.eng.dashboard.persistence.RepoTable
 import com.delphix.eng.dashboard.persistence.Id
 import RevisionState._
+import RevisionType._
 import com.delphix.eng.dashboard.vm.VmIdentifier
-import com.delphix.eng.dashboard.git.commit.Author
-import com.delphix.eng.dashboard.git.commit.Author
 import com.delphix.eng.dashboard.git.commit.Author
 
 class Revisions @Inject() (val db: Database) {
@@ -24,6 +23,10 @@ class Revisions @Inject() (val db: Database) {
   implicit val stateTypeMapper = MappedTypeMapper.base[RevisionState, String](
     { state => state.toString() },
     { name => RevisionState withName name })
+
+  implicit val revTypeTypeMapper = MappedTypeMapper.base[RevisionType, String](
+	{ state => state.toString() },
+	{ name => RevisionType withName name })
 
   implicit val vmIdentifierMapper = MappedTypeMapper.base[VmIdentifier, String](
     { vm => vm.id },
@@ -38,8 +41,9 @@ class Revisions @Inject() (val db: Database) {
     def state = column[RevisionState]("STATE")
     def vm = column[VmIdentifier]("VM")
     def author = column[Author]("AUTHOR")
-    def * = id.? ~ commitId ~ state ~ vm ~ author <> (Revision, Revision.unapply _)
-    def uniqueCommit = index("unique_commit_id", commitId, unique = true)
+    def commitMsg = column[String]("COMMIT_MSG")
+    def revType = column[RevisionType]("REV_TYPE")
+    def * = id.? ~ commitId ~ state ~ revType ~ vm ~ author ~ commitMsg <> (Revision, Revision.unapply _)
   }
 
   def createDDl() = {
@@ -67,16 +71,26 @@ class Revisions @Inject() (val db: Database) {
       require(r == 1)
     }
   }
-
-  def save(commitId: CommitId, vm: VmIdentifier, author: Author): Id[Revision] = {
+  
+  def updateMsg(id: Id[Revision], msg: String) = {
     db withSession {
-      table.autoInc.insert(Revision(Option.empty, commitId, RevisionState.INITIAL, vm, author))
+      val q = for (f <- table if f.id.asColumnOf[Int] === id.id) yield f.commitMsg
+      val r = q.update(msg)
+      require(r == 1)
+    }
+  }
+
+  def save(commitId: CommitId, vm: VmIdentifier, author: Author,
+      commitMsg: String, revType: RevisionType): Id[Revision] = {
+    db withSession {
+      table.autoInc.insert(Revision(None, commitId,
+          RevisionState.INITIAL, revType, vm, author, commitMsg))
     }
   }
 
   def list(): List[Revision] = {
     db withSession {
-      Query(table).list
+      Query(table).sortBy(_.id.desc).list()
     }
   }
 

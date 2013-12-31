@@ -14,53 +14,64 @@ import com.delphix.eng.dashboard.revision.Revisions
 import com.delphix.eng.dashboard.revision.Revision
 import com.delphix.eng.dashboard.revision.RevisionState
 import com.delphix.eng.dashboard.jenkins.JenkinsJobs
+import com.delphix.eng.dashboard.jenkins.JenkinsJobType._
 import scala.collection.mutable.MutableList
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.StreamingOutput
+import java.net.InetAddress
+import com.google.inject.name.Named
+import com.delphix.eng.dashboard.jenkins.JenkinsJobState
+import com.delphix.eng.dashboard.jenkins.JenkinsJobType
+import javax.ws.rs.core.PathSegment
+import javax.ws.rs.QueryParam
+import scala.collection.JavaConversions._
 
 @Path("/git")
 class CommitResource @Inject() (
   val handler: GitCommitHandler,
   val revisions: Revisions,
-  val jenkinsJobs: JenkinsJobs) {
+  val jenkinsJobs: JenkinsJobs,
+  @Named("homepage") homepage: String) {
 
   @POST
   @Consumes(Array("text/plain"))
-  @Path("/commit/{id}")
-  def postPush(@PathParam("id") id: String): String = {
-    val commit = new CommitId(id)
+  @Path("/{id}")
+  def postPush(@PathParam("id") id: String, @QueryParam("branches") branches: java.util.List[String]): String = {
+    try {
+      val jobTypes = branches.toList.map { b =>
+        b match {
+          case "refs/heads/precommit" => JenkinsJobType.PRECOMMIT
+          case "refs/heads/dx-push" => JenkinsJobType.PRECOMMIT
+          case "refs/heads/blackbox-normal" => JenkinsJobType.BLACKBOX
+          case _ => throw new IllegalArgumentException(
+            "Branch must be one of [precommit,blackbox-normal,dx-push]. Examples\n\n" +
+              "   # run precommit only\n" +
+              "   git push eng.dash <branch>:precommit\n\n" +
+              "   # run blackbox only\n" +
+              "   git push eng.dash <branch>:blackbox-normal\n\n" +
+              "   # run precommit and blackbox\n" +
+              "   git push eng.dash <branch>:precommit <branch>:blackbox-normal")
+        }
+      }
+      var pushUpstream = branches.toList.contains("refs/heads/dx-push")
+      handle(new CommitId(id), jobTypes, pushUpstream)
+    } catch {
+      case e: IllegalArgumentException =>
+        return s"\n\n\n-----------------\n\n\n${e.getMessage()}\n\n\n-----------------\n"
+    }
+  }
+
+  private def handle(commit: CommitId, jobTypes: Seq[JenkinsJobType], pushUpstream: Boolean): String = {
     val msg: MutableList[String] = MutableList.empty
     msg += "\n\n\n-----------------"
-    revisions.getByCommitId(commit) match {
+    revisions.getByCommitId(commit) filter { _.state == RevisionState.INITIAL } match {
       case Some(r) =>
-        r.state match {
-          case RevisionState.INITIAL =>
-            msg += s"Your revision ${id} is currently being processed\n"
-            msg += s"Try again later to get the jenkins job urls\n"
-          case RevisionState.FAILED =>
-            handler.retryCommit(commit, r)
-            msg += s"Your revision ${id} has failed do to an internal error\n"
-            msg += s"Retrying....\n"
-          case _ =>
-            val jobs = (for (j <- jenkinsJobs.listByRevision(r.id.get)) yield j)
-            
-            r.state match {
-              case RevisionState.RUNNING =>
-                msg += s"Your revision ${id} is currently building"
-                if (jobs.isEmpty) {
-                	msg += s"Try again later to get the jenkins job urls\n"
-                }
-              case RevisionState.COMPLETE =>
-                msg += s"Your revision ${id} is complete"
-            }
-            jobs.foreach { j =>
-              msg += s"${j.url} => ${j.state}"
-            }
-        }
+        msg += s"Your revision ${commit.id} is currently being processed\n"
       case _ =>
-        handler.handleNewCommit(commit)
-        msg += s"Running precommit and blackbox on ${id}"
+        handler.handleNewCommit(commit, jobTypes, pushUpstream)
+        msg += s"Running ${jobTypes.mkString(",")} on ${commit.id}"
     }
+    msg += s"\nVisit ${homepage}#${commit.id} for the status\n\n"
     msg += "PLEASE IGNORE THE [remote rejected] MESSAGE BELOW"
     msg += "-----------------\n\n\n"
     return msg.mkString("\n")

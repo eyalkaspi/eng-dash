@@ -8,6 +8,6 @@ import java.util.List;
 
 import com.google.common.base.Joiner;
 
-class Commit(val id: CommitId, val author: Author) {
+class Commit(val id: CommitId, val author: Author, val msg: String) {
   override def toString() = s"commit ${id.id}\nAuthor: ${author.email}"
 }

@@ -9,18 +9,28 @@ function die
 	exit 1
 }
 
-print_revs()
-{
-while read oldrev newrev refname; do
-	echo "$newrev"
-done
-}
-
 GIT_DIR=$(cd $GIT_DIR; pwd -P)
 
+git fetch || die "could not update git remotes"
 
-newrev=$(print_revs | tail -1)
-curl -N -X POST "http://localhost:8080/resource/git/commit/$newrev" || die "web service call failed"
+#IP_ADDR=$(pinky -f | awk '{print $7}')
+query=""
+commit=""
+while read oldrev newrev refname; do
+	query="$query&branches=$refname"
+	commit="$newrev"
+
+	if [[ "$refname" == "refs/heads/dx-push" ]]; then
+		# Make sure one is up to date
+		git update-ref refs/heads/dx-push origin/master
+
+				# run pre-receive in order to fail fast
+		$GIT_DIR/../tools/git/hooks/pre-receive <<< "$oldrev $newrev $refname"
+		[[ $? -ne 0 ]] && die "Git hooks rejected push".
+	fi
+done
+
+curl -N -X POST "http://localhost:8080/resource/git/$commit?$query" || die "web service call failed"
 
 # Reject the commit to prevent users from altering the git repo.
 exit 1

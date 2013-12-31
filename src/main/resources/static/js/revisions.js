@@ -14,11 +14,42 @@ $d.viewModels = $d.viewModels || {};
 		defaults: {  
 		}  
 	});
+	
 	$d.models.Revisions = Backbone.Collection.extend({
 		model: $d.models.Revision,
 		url:'/resource/revisions'
 	});
 	$d.viewModels.Revisions = function(revisionsModel) {
-		this.revisions = kb.collectionObservable(revisionsModel);
+		var self = this;
+		function isComplete(revision) {
+			return revision.get("state") !== "RUNNING" && revision.get("state") !== "INITIAL";
+		}
+		function isTesting(revision) {
+			return revision.get("type") === "TESTING";
+		}
+		this.testingRevisions = kb.collectionObservable(revisionsModel, {
+		  filters: function(revision) {
+			return !isComplete(revision) && isTesting(revision);
+		  }
+		});
+		this.visible = ko.observable(false);
+		this.testedRevisions = kb.collectionObservable(revisionsModel, {
+		  filters: function(revision) {
+		  	return isComplete(revision) && isTesting(revision);
+		  }
+		});
+		this.pushingRevisions = kb.collectionObservable(revisionsModel, {
+		  filters: function(revision) {
+		  	return !isComplete(revision) && !isTesting(revision);
+		  }
+		});
+		this.pushedRevisions = kb.collectionObservable(revisionsModel, {
+		  filters: function(revision) {
+		  	return isComplete(revision) && !isTesting(revision);
+		  }
+		});
+		this.revisionClickHandler = function(revision) {
+			window.location.hash = '#' + revision.commitId();
+		};
 	}
 })();

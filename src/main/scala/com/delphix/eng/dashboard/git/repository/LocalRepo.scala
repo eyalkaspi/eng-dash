@@ -14,7 +14,8 @@ class LocalRepo {
 
   def read(id: CommitId): Commit = {
     val author = new Author(execute("git", "log", "-1", "--format=%ce", id.id).mkString("\n"))
-    return new Commit(id, author)
+    val msg = execute("git", "log", "-1", "--format=%s", id.id).mkString("\n")
+    return new Commit(id, author, msg)
   }
 
   /**
@@ -26,6 +27,15 @@ class LocalRepo {
     val host = s"${vm.id}.dcenter.delphix.com"
     execute("git", "push", "-f", s"ssh://delphix@${host}${APP_GATE}", s"${commitId.id}:${REMOTE_BRANCH}")
     return REMOTE_BRANCH
+  }
+
+  /**
+   * Make a hidden commit visible to downstream repos by creating a branch.
+   */
+  def makeCommitVisible(commitId: CommitId) = {
+    val branchName = "b" + commitId.id
+    val out = execute("git", "checkout", "-f", "-B",  branchName, commitId.id)
+    branchName
   }
 
   private def execute(command: String*): List[String] = {
