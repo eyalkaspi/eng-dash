@@ -50,7 +50,7 @@ class JenkinsClient @Inject() (
   def dxPush(revision: Revision, branch: String) = {
     monitorAndWait(List(runJob(JenkinsJobType.DX_PUSH, revision.id.get,
       Map("BRANCH" -> branch,
-          "EMAIL" -> revision.author.email))))
+        "EMAIL" -> revision.author.email))))
   }
 
   private def run(revision: Revision, jobType: JenkinsJobType): Id[JenkinsJob] = {
@@ -112,7 +112,7 @@ class JenkinsClient @Inject() (
         jenkinsJobs.updateUrl(jobId, newJob.getUrl())
         jobId
       case None =>
-	    jenkinsJobs.save(Some(newJob.getUrl()), None, jobType, revision)
+        jenkinsJobs.save(Some(newJob.getUrl()), None, jobType, revision)
     }
   }
 
@@ -136,18 +136,22 @@ class JenkinsClient @Inject() (
         try {
           val job = jenkinsJobs.get(jobId)
           val details = getJobDetails(job)
-          if (details.getResult() != null) {
-            val jobState = JenkinsJobState withName (details.getResult().name())
-            if (jobState != job.state) {
-              jenkinsJobs.updateState(jobId, jobState)
-              jobResults = jobResults + (jobId -> jobState)
-            }
+          val jobState = if (details.getResult() != null) {
+            JenkinsJobState withName (details.getResult().name())
+          } else if (details.isBuilding()) {
+            JenkinsJobState.BUILDING
+          } else {
+            JenkinsJobState.UNKNOWN
+          }
+          if (jobState != job.state) {
+            jenkinsJobs.updateState(jobId, jobState)
+            jobResults = jobResults + (jobId -> jobState)
           }
           if (details.isBuilding()) {
             println(s"r${job.revision.id}:${job.jobType}[${job.id}] => building")
           } else {
             println(s"r${job.revision.id}:${job.jobType}[${job.id}] => ${details.result}")
-            remainingJobs = remainingJobs.filter {_ != jobId}
+            remainingJobs = remainingJobs.filter { _ != jobId }
           }
         } catch {
           case e: Exception => e.printStackTrace()

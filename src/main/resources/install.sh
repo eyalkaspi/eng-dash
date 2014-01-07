@@ -22,7 +22,7 @@ scp target/eng.dashboard-0.0.1-SNAPSHOT.jar\
 
 # kill the server and restart it
 ssh delphix@eyal-eng-dash.dcenter.delphix.com /bin/bash <<EOF
-export PATH=/usr/bin:/bin:/usr/sbin
+export PATH=/usr/java/latest/bin/:/usr/bin:/bin:/usr/sbin
 
 function die
 {

@@ -31,8 +31,13 @@ class JenkinsJobMonitor @Inject() (
 	     * As a quick fix, just make sure we cleanup the VM
 	     */
 
-        jenkins.monitorAndWait(List(job.id.get))
-        jenkins.suspend(revisions.get(job.revision))
+        if (job.url.isDefined) {
+        	jenkins.monitorAndWait(List(job.id.get))
+        	jenkins.suspend(revisions.get(job.revision))
+        }
+        
+        // This is not really correct, it might be failed or running other jobs
+        revisions.updateState(job.revision, RevisionState.COMPLETE)
       }
     }
   }

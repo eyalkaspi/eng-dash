@@ -4,8 +4,8 @@
  */
 package com.delphix.eng.dashboard.revision
 
-import scala.slick.driver.H2Driver.simple._
-import scala.slick.driver.H2Driver.simple.Database.threadLocalSession
+import scala.slick.driver.PostgresDriver.simple._
+import scala.slick.driver.PostgresDriver.simple.Database.threadLocalSession
 import scala.slick.lifted.BaseTypeMapper
 import com.delphix.eng.dashboard.git.commit.CommitId
 import com.delphix.eng.dashboard.persistence.TypeMappers
@@ -36,7 +36,10 @@ class Revisions @Inject() (val db: Database) {
     { author => author.email },
     { email => new Author(email) })
 
-  val table = new RepoTable[Revision]("REVISION")(TypeMappers.revisionTypeMapper) {
+  case class NewRevision(commitId: CommitId, state: RevisionState,
+    revisionType: RevisionType, vm: VmIdentifier, author: Author, commitMsg: String)
+
+  val table = new RepoTable[Revision]("revision")(TypeMappers.revisionTypeMapper) {
     def commitId = column[CommitId]("COMMIT_ID", O.NotNull)
     def state = column[RevisionState]("STATE")
     def vm = column[VmIdentifier]("VM")
@@ -44,6 +47,7 @@ class Revisions @Inject() (val db: Database) {
     def commitMsg = column[String]("COMMIT_MSG")
     def revType = column[RevisionType]("REV_TYPE")
     def * = id.? ~ commitId ~ state ~ revType ~ vm ~ author ~ commitMsg <> (Revision, Revision.unapply _)
+    def autoInc = commitId ~ state ~ revType ~ vm ~ author ~ commitMsg <> (NewRevision, NewRevision.unapply _) returning id
   }
 
   def createDDl() = {
@@ -83,7 +87,7 @@ class Revisions @Inject() (val db: Database) {
   def save(commitId: CommitId, vm: VmIdentifier, author: Author,
       commitMsg: String, revType: RevisionType): Id[Revision] = {
     db withSession {
-      table.autoInc.insert(Revision(None, commitId,
+      table.autoInc.insert(NewRevision(commitId,
           RevisionState.INITIAL, revType, vm, author, commitMsg))
     }
   }

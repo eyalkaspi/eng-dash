@@ -4,8 +4,8 @@
  */
 package com.delphix.eng.dashboard.jenkins
 
-import scala.slick.driver.H2Driver.simple._
-import scala.slick.driver.H2Driver.simple.Database.threadLocalSession
+import scala.slick.driver.PostgresDriver.simple._
+import scala.slick.driver.PostgresDriver.simple.Database.threadLocalSession
 import com.delphix.eng.dashboard.persistence.TypeMappers._
 import com.google.inject.Inject
 import com.delphix.eng.dashboard.persistence.Id
@@ -28,13 +28,19 @@ class JenkinsJobs @Inject() (val db: Database, val revisions: Revisions) {
     { typeEnum => typeEnum.toString() },
     { name => JenkinsJobType withName name })
 
-  val table = new RepoTable[JenkinsJob]("JENKINS_JOB")(TypeMappers.jenkinsJobTypeMapper) {
+  case class NewJenkinsJob(url: Option[String],
+    state: Option[JenkinsJobState],
+    jobType: JenkinsJobType,
+    revision: Id[Revision])
+    
+  val table = new RepoTable[JenkinsJob]("jenkins_job")(TypeMappers.jenkinsJobTypeMapper) {
     def url = column[Option[String]]("URL")
     def state = column[Option[JenkinsJobState]]("STATE")
     def jobType = column[JenkinsJobType]("JOB_TYPE")
     def revision = column[Id[Revision]]("REVISION_ID")
     def revisionFK = foreignKey("revision_fk", revision, revisions.table)(_.id)
     def * = id.? ~ url ~ state ~ jobType ~ revision <> (JenkinsJob, JenkinsJob.unapply _)
+    def autoInc = url ~ state ~ jobType ~ revision <> (NewJenkinsJob, NewJenkinsJob.unapply _) returning id
   }
 
   def createDDl() = {
@@ -52,7 +58,7 @@ class JenkinsJobs @Inject() (val db: Database, val revisions: Revisions) {
   def save(url: Option[String], state: Option[JenkinsJobState], jobType: JenkinsJobType,
       revision: Id[Revision]): Id[JenkinsJob] = {
     db withSession {
-      table.autoInc.insert(JenkinsJob(None, url, state, jobType, revision))
+      table.autoInc.insert(NewJenkinsJob(url, state, jobType, revision))
     }
   }
 
@@ -100,7 +106,9 @@ class JenkinsJobs @Inject() (val db: Database, val revisions: Revisions) {
     val PENDING_STATES = List(JenkinsJobState.UNKNOWN, JenkinsJobState.BUILDING,
       JenkinsJobState.REBUILDING, JenkinsJobState).map { _.toString }
     db withSession {
-      (for (f <- table if f.state.asColumnOf[String] inSet PENDING_STATES) yield f) list
+      (for (f <- table
+          if (f.state.asColumnOf[String] inSet PENDING_STATES)
+    		  || f.state.isNull) yield f) list
     }
   }
 

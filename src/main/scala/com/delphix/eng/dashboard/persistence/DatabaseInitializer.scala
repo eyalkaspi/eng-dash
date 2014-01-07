@@ -7,8 +7,8 @@ package com.delphix.eng.dashboard.persistence
 import scala.slick.session.Database
 import com.google.inject.Inject
 import com.delphix.eng.dashboard.revision.Revisions
-import scala.slick.driver.H2Driver.simple._
-import scala.slick.driver.H2Driver.simple.Database.threadLocalSession
+import scala.slick.driver.PostgresDriver.simple._
+import scala.slick.driver.PostgresDriver.simple.Database.threadLocalSession
 import scala.slick.lifted.BaseTypeMapper
 import com.delphix.eng.dashboard.git.commit.CommitId
 import com.delphix.eng.dashboard.persistence.TypeMappers._
